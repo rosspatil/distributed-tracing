@@ -1,7 +1,7 @@
 # A full flegde example for Distributed Tracing
 
 This Repository contains two micro-services in which tracing agent is integrated.
-I am using Apache ZipKin, a Open Source tracer for demonstration.
+I am using ZipKin, a Open Source tracer for demonstration.
 
 ## Prerequisites
     1. GO 1.13+
