@@ -1,0 +1,66 @@
+package main
+
+import (
+	"log"
+	"net"
+	"sync"
+
+	"github.com/opentracing/opentracing-go"
+	zipkinot "github.com/openzipkin-contrib/zipkin-go-opentracing"
+	zipkin "github.com/openzipkin/zipkin-go"
+	httpReporter "github.com/openzipkin/zipkin-go/reporter/http"
+	"github.com/rosspatil/distributed-tracing/employee/endpoint"
+	"github.com/rosspatil/distributed-tracing/employee/pb"
+	"github.com/rosspatil/distributed-tracing/employee/service"
+	"github.com/rosspatil/distributed-tracing/employee/transport"
+	"google.golang.org/grpc"
+)
+
+var (
+	concurrency        = 2
+	zipkinHTTPEndpoint = "http://localhost:9411/api/v2/spans"
+)
+
+func init() {
+	reporter := httpReporter.NewReporter(zipkinHTTPEndpoint)
+	ze, err := zipkin.NewEndpoint("employee-service", "localhost:8080")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	nativeTracer, err := zipkin.NewTracer(reporter, zipkin.WithLocalEndpoint(ze))
+	if err != nil {
+		log.Fatalln(err)
+	}
+	tracer := zipkinot.Wrap(nativeTracer)
+	opentracing.InitGlobalTracer(tracer)
+}
+
+func main() {
+	wg := sync.WaitGroup{}
+	wg.Add(concurrency)
+	s := service.NewService()
+	e := endpoint.CreateEndPoint(*s)
+	go func() {
+		g := transport.NewHTTP(e)
+		err := g.Run(":8080")
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Done()
+	}()
+	go func() {
+		g1 := transport.NewGRPC(e)
+		listener, err := net.Listen("tcp", "127.0.0.1:8091")
+		if err != nil {
+			log.Fatal(err)
+		}
+		server := grpc.NewServer()
+		pb.RegisterServiceServer(server, g1)
+		err = server.Serve(listener)
+		if err != nil {
+			log.Fatal(err)
+		}
+		wg.Done()
+	}()
+	wg.Wait()
+}

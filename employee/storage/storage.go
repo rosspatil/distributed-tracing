@@ -1,0 +1,81 @@
+package storage
+
+import (
+	"context"
+	"sync"
+
+	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/rosspatil/distributed-tracing/employee/pb"
+)
+
+// Iface - storage interface
+type Iface interface {
+	Get(ctx context.Context, ID string) (*pb.Employee, error)
+	Create(ctx context.Context, employee pb.Employee) (string, error)
+	Update(ctx context.Context, ID string, employee pb.Employee) error
+	Delete(ctx context.Context, ID string) error
+}
+
+// Storage - this is sti implementor
+type Storage struct {
+	db *DB
+	Iface
+}
+
+var client *Storage
+var once sync.Once
+
+// GetClient -
+func GetClient() *Storage {
+	once.Do(func() {
+		client = &Storage{db: NewClient()}
+	})
+	return client
+}
+
+// Create ...
+func (s *Storage) Create(ctx context.Context, employee pb.Employee) (string, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Create")
+	defer span.Finish()
+	employee.Id = uuid.New().String()
+	err := s.db.Set(ctx, employee.Id, employee)
+	if err != nil {
+		return "", err
+	}
+	return employee.Id, nil
+}
+
+// Update ...
+func (s *Storage) Update(ctx context.Context, ID string, employee pb.Employee) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Update")
+	defer span.Finish()
+	err := s.db.Set(ctx, ID, employee)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Delete ...
+func (s *Storage) Delete(ctx context.Context, ID string) error {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Delete")
+	defer span.Finish()
+	err := s.db.Delete(ctx, ID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Get ...
+func (s *Storage) Get(ctx context.Context, ID string) (*pb.Employee, error) {
+	span, ctx := opentracing.StartSpanFromContext(ctx, "Get")
+	defer span.Finish()
+	data, err := s.db.Get(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	employee := data.(pb.Employee)
+	return &employee, nil
+}
