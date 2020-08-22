@@ -9,8 +9,8 @@ I am using Apache ZipKin, a Open Source tracer for demonstration.
 
 ## Employee flows
 
-<img  src="https://raw.githubusercontent.com/rosspatil/distributed-tracing/master/reg.png" title="Employee registration flow" width="50">
+<img  src="https://raw.githubusercontent.com/rosspatil/distributed-tracing/master/reg.png" title="Employee registration flow" width="500">
 <br> <br>
-<img  src="https://raw.githubusercontent.com/rosspatil/distributed-tracing/master/get.png" title="Employee registration flow" width="50">
+<img  src="https://raw.githubusercontent.com/rosspatil/distributed-tracing/master/get.png" title="Employee registration flow" width="500">
 
 In both flows employee service interacts with auth service using inter-service communication.
